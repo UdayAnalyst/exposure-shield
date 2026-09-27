@@ -24,6 +24,10 @@ jobs:
           SSH_KEY: ${{ secrets.VM_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
         run: |
+          if [ -z "$VM_HOST" ] || [ -z "$SSH_KEY" ] || [ -z "$KNOWN_HOSTS" ]; then
+            echo "::error::Set repo variable VM_HOST and secrets VM_SSH_KEY, VM_KNOWN_HOSTS (see CLAUDE.md > Deployment)"
+            exit 1
+          fi
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/exposureshield_azure
           chmod 600 ~/.ssh/exposureshield_azure
