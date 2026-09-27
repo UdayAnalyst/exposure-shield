@@ -227,7 +227,8 @@ curl -X POST localhost:8000/api/scan -H 'Content-Type: application/json' -d '{"e
 ## Deployment (GitHub → Azure VM)
 
 **Pushing to `main` deploys automatically** (`.github/workflows/deploy.yml`; markdown-only changes are skipped). The workflow runs `deploy/deploy.sh`, then checks `/api/health`.
-- Live: https://exposureshield-uconn.mexicocentral.cloudapp.azure.com. Region is **Mexico Central** because the student subscription's policy blocks East US.
+- **The VM is kept deallocated to save credits and started only for the demo** (Cloud Shell: `az vm start -g exposureshield-rg -n exposureshield-vm`, then `az vm deallocate ...` after). While it's off, the site is down and pushes show a failed deploy — expected, not a bug. The Mac has no Azure CLI.
+- URL: https://exposureshield-uconn.mexicocentral.cloudapp.azure.com. Region is **Mexico Central** because the student subscription's policy blocks East US.
 - VM: Ubuntu 24.04, B1s, Python 3.12, resource group `exposureshield-rg`. Delete it all after the hackathon with `az group delete -n exposureshield-rg`.
 - GitHub config:
   - repo variable `VM_HOST`
