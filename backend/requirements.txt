@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+holehe==1.61
+user-scanner==1.5.2  # maintained holehe successor; pinned — its module API changes often
+brotli  # some holehe modules request br-encoded responses

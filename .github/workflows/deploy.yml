@@ -1,0 +1,42 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VM_HOST: ${{ vars.VM_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/exposureshield_azure
+          chmod 600 ~/.ssh/exposureshield_azure
+          # Pinned host keys: refuse to deploy to a machine we haven't seen before.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: ./deploy/deploy.sh "azureuser@$VM_HOST" "$VM_HOST"
+
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 10); do
+            curl -fsS "https://$VM_HOST/api/health" && exit 0
+            sleep 3
+          done
+          exit 1
