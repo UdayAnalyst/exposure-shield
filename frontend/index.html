@@ -1,1 +1,349 @@
-<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ExposureShield</title><body style="background:#0b0d12;color:#e6e6e6;font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0"><div style="text-align:center"><h1>ExposureShield</h1><p>Frontend coming soon — API is at <a style="color:#7aa2ff" href="/api/health">/api/health</a></p></div>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ExposureShield</title>
+<meta name="description" content="See where your email is exposed — accounts, breaches, and a plan to fix it.">
+<style>
+  :root {
+    --bg: #07090d; --panel: #0f131a; --panel2: #151a23; --line: #232a36;
+    --text: #e7eaf0; --muted: #8b93a3; --faint: #5b6373;
+    --accent: #7aa2ff; --accent2: #a78bfa;
+    --low: #34d399; --moderate: #fbbf24; --high: #fb923c; --critical: #f43f5e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { background: radial-gradient(1200px 600px at 50% -200px, #1a1f3a55, transparent), var(--bg); min-height: 100vh; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  .hidden { display: none !important; }
+
+  /* Hero */
+  header.hero { text-align: center; padding: 72px 0 40px; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .02em; color: var(--muted); }
+  .logo svg { width: 22px; height: 22px; }
+  h1 { font-size: clamp(30px, 6vw, 54px); line-height: 1.08; margin: 18px 0 14px; letter-spacing: -.02em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: var(--muted); max-width: 620px; margin: 0 auto 28px; font-size: 18px; }
+  form.scan { display: flex; gap: 10px; max-width: 560px; margin: 0 auto; }
+  form.scan input { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 12px; padding: 15px 16px; font-size: 17px; outline: none; }
+  form.scan input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #7aa2ff33; }
+  button { cursor: pointer; border: 0; border-radius: 12px; padding: 15px 22px; font-size: 16px; font-weight: 650;
+    background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #0a0d14; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 500; }
+  .fineprint { color: var(--faint); font-size: 13px; margin-top: 14px; }
+  .err { color: var(--critical); margin-top: 12px; min-height: 1.5em; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 40px 0 80px; }
+  .radar { width: 120px; height: 120px; margin: 0 auto 26px; border-radius: 50%; border: 1px solid var(--line); position: relative;
+    background: repeating-radial-gradient(circle, transparent 0 18px, #ffffff08 18px 19px); overflow: hidden; }
+  .radar::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, #7aa2ff55, transparent 30%); animation: spin 1.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .stages { list-style: none; padding: 0; margin: 0 auto; max-width: 380px; text-align: left; }
+  .stages li { padding: 8px 0; color: var(--faint); display: flex; gap: 10px; align-items: center; transition: color .3s; }
+  .stages li::before { content: "○"; width: 16px; }
+  .stages li.active { color: var(--text); } .stages li.active::before { content: "◉"; color: var(--accent); }
+  .stages li.done { color: var(--muted); } .stages li.done::before { content: "✓"; color: var(--low); }
+
+  /* Results */
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; margin-bottom: 18px; }
+  h2 { font-size: 20px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .h2sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .top { display: grid; grid-template-columns: 260px 1fr; gap: 18px; margin: 36px 0 18px; }
+  .gaugeCard { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .gauge { width: 190px; height: 190px; }
+  .gauge .track { stroke: var(--line); } .gauge .val { transition: stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1); }
+  .scoreNum { font-size: 52px; font-weight: 750; fill: var(--text); } .scoreOf { font-size: 14px; fill: var(--muted); }
+  .scoreLabel { font-weight: 700; font-size: 18px; margin-top: 6px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stat b { display: block; font-size: 30px; line-height: 1.1; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  .ai { border-color: #7aa2ff55; background: linear-gradient(180deg, #121a2e, var(--panel)); }
+  .aiTag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--accent);
+    border: 1px solid #7aa2ff55; border-radius: 99px; padding: 2px 10px; margin-bottom: 10px; }
+  .ai h3 { font-size: 22px; margin: 0 0 8px; line-height: 1.3; }
+  .ai p { color: #cfd5e1; margin: 0 0 14px; }
+  .ai ol { margin: 0; padding-left: 22px; } .ai li { margin: 0 0 10px; }
+  .ai li small { display: block; color: var(--muted); }
+  .shimmer { height: 14px; border-radius: 6px; margin: 10px 0; background: linear-gradient(90deg, var(--panel2), #222a38, var(--panel2));
+    background-size: 200% 100%; animation: sh 1.2s infinite; } @keyframes sh { to { background-position: -200% 0; } }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .plat { background: var(--panel2); border: 1px solid var(--line); border-left: 4px solid var(--low); border-radius: 12px; padding: 14px; }
+  .plat.moderate { border-left-color: var(--moderate); } .plat.high { border-left-color: var(--high); } .plat.critical { border-left-color: var(--critical); }
+  .plat .name { font-weight: 650; } .plat .dom { color: var(--faint); font-size: 13px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    border-radius: 99px; padding: 2px 8px; margin-top: 8px; background: #34d39922; color: var(--low); }
+  .pill.moderate { background: #fbbf2422; color: var(--moderate); } .pill.high { background: #fb923c22; color: var(--high); }
+  .pill.critical { background: #f43f5e22; color: var(--critical); }
+  .plat .leak { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  .timeline { position: relative; margin-left: 8px; padding-left: 22px; border-left: 2px solid var(--line); }
+  .tl { position: relative; padding: 0 0 18px; }
+  .tl::before { content: ""; position: absolute; left: -29px; top: 6px; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--high); box-shadow: 0 0 0 4px var(--panel); }
+  .tl.pw::before { background: var(--critical); }
+  .tl .when { color: var(--muted); font-size: 13px; } .tl .title { font-weight: 650; }
+  .tl .classes { font-size: 13px; color: #cfd5e1; } .tl .classes b { color: var(--critical); font-weight: 650; }
+  .tl .desc { color: var(--faint); font-size: 13px; margin-top: 4px; }
+
+  .plan { list-style: none; padding: 0; margin: 0; }
+  .plan li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .plan li:last-child { border-bottom: 0; }
+  .plan input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--low); flex: none; }
+  .plan li.checked .txt { color: var(--faint); text-decoration: line-through; }
+  .plan .meta { font-size: 12px; color: var(--muted); }
+  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent2); }
+
+  .actions { text-align: center; margin: 26px 0 10px; }
+  footer { color: var(--faint); font-size: 13px; text-align: center; padding: 36px 0 48px; border-top: 1px solid var(--line); margin-top: 40px; }
+  footer p { margin: 6px 0; }
+
+  @media (max-width: 760px) {
+    header.hero { padding-top: 44px; }
+    form.scan { flex-direction: column; }
+    .top { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero" id="hero">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      ExposureShield
+    </div>
+    <h1>One email.<br><em>Your whole digital footprint.</em></h1>
+    <p class="sub">See every account tied to your email, which of those services were breached, and exactly what to do about it — in about 10 seconds.</p>
+    <form class="scan" id="scanForm" autocomplete="off">
+      <input id="email" type="email" inputmode="email" placeholder="you@example.com" required aria-label="Email address">
+      <button type="submit" id="scanBtn">Scan me</button>
+    </form>
+    <div class="err" id="err" role="alert"></div>
+    <p class="fineprint">Nothing is stored. No alerts or emails are sent to your accounts. The AI never sees your email address.</p>
+  </header>
+
+  <section class="loading hidden" id="loading" aria-live="polite">
+    <div class="radar"></div>
+    <ul class="stages" id="stages">
+      <li>Checking 230+ platforms for your account…</li>
+      <li>Matching against 1,000+ known data breaches…</li>
+      <li>Finding deletion links for each account…</li>
+      <li>Calculating your exposure score…</li>
+    </ul>
+  </section>
+
+  <main id="results" class="hidden">
+    <div class="top">
+      <section class="card gaugeCard">
+        <svg class="gauge" viewBox="0 0 200 200" role="img" aria-label="Exposure score">
+          <circle class="track" cx="100" cy="100" r="84" fill="none" stroke-width="14"/>
+          <circle class="val" id="gaugeVal" cx="100" cy="100" r="84" fill="none" stroke-width="14" stroke-linecap="round"
+                  transform="rotate(-90 100 100)" stroke-dasharray="527.8" stroke-dashoffset="527.8"/>
+          <text x="100" y="108" text-anchor="middle" class="scoreNum" id="scoreNum">0</text>
+          <text x="100" y="132" text-anchor="middle" class="scoreOf">out of 100</text>
+        </svg>
+        <div class="scoreLabel" id="scoreLabel"></div>
+        <div class="note">Exposure score</div>
+      </section>
+      <section class="card">
+        <h2 id="resultTitle"></h2>
+        <p class="h2sub" id="resultSub"></p>
+        <div class="stats">
+          <div class="stat"><b id="sPlat">0</b><span>accounts found</span></div>
+          <div class="stat"><b id="sBreach">0</b><span>breaches at those services</span></div>
+          <div class="stat"><b id="sPw">0</b><span>breaches that leaked passwords</span></div>
+          <div class="stat"><b id="sDel">0</b><span>accounts you can delete</span></div>
+        </div>
+        <p class="note" id="coverage"></p>
+      </section>
+    </div>
+
+    <section class="card ai" id="aiCard">
+      <span class="aiTag">AI ADVISOR</span>
+      <div id="aiBody"><div class="shimmer" style="width:70%"></div><div class="shimmer"></div><div class="shimmer" style="width:85%"></div></div>
+    </section>
+
+    <section class="card">
+      <h2>Where your email lives</h2>
+      <p class="h2sub">Accounts registered to this email, ordered by risk.</p>
+      <div class="grid" id="platforms"></div>
+    </section>
+
+    <section class="card" id="breachCard">
+      <h2>Breach timeline</h2>
+      <p class="h2sub" id="breachSub"></p>
+      <div class="timeline" id="breaches"></div>
+    </section>
+
+    <section class="card">
+      <h2>Your cleanup plan</h2>
+      <p class="h2sub">Work top to bottom. Check items off as you go (nothing is saved).</p>
+      <ul class="plan" id="plan"></ul>
+    </section>
+
+    <div class="actions"><button class="ghost" id="again">Scan another email</button></div>
+  </main>
+
+  <footer>
+    <p>Built for Hack for Humanity 2026 · Your data never leaves this session</p>
+    <p>Powered by <a href="https://github.com/kaifcodec/user-scanner">user-scanner</a> (kaifcodec),
+      <a href="https://github.com/megadose/holehe">Holehe</a> (megadose),
+      <a href="https://haveibeenpwned.com">HaveIBeenPwned</a> (Troy Hunt),
+      <a href="https://github.com/jdm-contrib/jdm">JustDeleteMe</a> (jdm-contrib) and Google Gemini ·
+      <a href="https://github.com/UdayAnalyst/exposure-shield">Source (MIT)</a></p>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const COLORS = { green: "var(--low)", yellow: "var(--moderate)", orange: "var(--high)", red: "var(--critical)" };
+const RISK_LABEL = { low: "Not breached", moderate: "Service breached", high: "Passwords leaked", critical: "Your data leaked" };
+const TYPE_LABEL = { change_password: "Secure", enable_2fa: "Secure", delete_account: "Delete", review: "Habit" };
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null) n.append(k);
+  return n;
+}
+const link = (url, text) => url ? el("a", { href: url, target: "_blank", rel: "noopener noreferrer", text }) : document.createTextNode(text);
+const show = (id, on) => $(id).classList.toggle("hidden", !on);
+
+let stageTimer;
+function startStages() {
+  const items = [...$("stages").children]; let i = 0;
+  items.forEach((li) => (li.className = ""));
+  items[0].className = "active";
+  stageTimer = setInterval(() => {
+    if (i < items.length - 1) { items[i].className = "done"; items[++i].className = "active"; }
+  }, 2600);
+}
+function stopStages() { clearInterval(stageTimer); [...$("stages").children].forEach((li) => (li.className = "done")); }
+
+$("scanForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = $("email").value.trim();
+  $("err").textContent = "";
+  show("hero", false); show("results", false); show("loading", true); startStages();
+  try {
+    const r = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    if (!r.ok) throw new Error(r.status === 422 ? "That doesn't look like a valid email address." : `Scan failed (${r.status}). Please try again.`);
+    const scan = await r.json();
+    stopStages(); render(scan);
+    loadAdvice(scan);
+  } catch (err) {
+    stopStages(); show("loading", false); show("hero", true);
+    $("err").textContent = err.message.includes("fetch") ? "Can't reach the scanner. Is the server running?" : err.message;
+  }
+});
+
+$("again").addEventListener("click", () => {
+  $("email").value = ""; show("results", false); show("hero", true); window.scrollTo({ top: 0 }); $("email").focus();
+});
+
+function render(d) {
+  show("loading", false); show("results", true); window.scrollTo({ top: 0 });
+
+  // Score gauge
+  const s = d.score, circ = 527.8;
+  $("gaugeVal").style.stroke = COLORS[s.color];
+  requestAnimationFrame(() => ($("gaugeVal").style.strokeDashoffset = circ * (1 - s.value / 100)));
+  // Time-based count-up: background tabs throttle timers, so step size can't assume a tick rate.
+  const t0 = performance.now();
+  const tick = setInterval(() => {
+    const f = Math.min(1, (performance.now() - t0) / 1200);
+    $("scoreNum").textContent = Math.round(s.value * f);
+    if (f >= 1) clearInterval(tick);
+  }, 30);
+  $("scoreLabel").textContent = `${s.label} exposure`; $("scoreLabel").style.color = COLORS[s.color];
+
+  const sm = d.summary;
+  $("resultTitle").textContent = sm.total_platforms
+    ? `Your email is registered on ${sm.total_platforms} platform${sm.total_platforms === 1 ? "" : "s"}`
+    : "We didn't find any accounts for this email";
+  $("resultSub").textContent = sm.accounts_to_secure
+    ? `${sm.accounts_to_secure} of them ${sm.accounts_to_secure === 1 ? "has" : "have"} been hit by a data breach.`
+    : "None of the services we found have a known breach. Nice.";
+  $("sPlat").textContent = sm.total_platforms; $("sBreach").textContent = sm.total_breaches;
+  $("sPw").textContent = sm.passwords_leaked; $("sDel").textContent = sm.accounts_to_delete;
+  $("coverage").textContent = `Checked ${d.platforms_checked} sites in ${Math.round(d.scan_time_seconds)}s; ${d.platforms_answered} gave a definite answer (others block automated checks).`;
+
+  // Platforms
+  const grid = $("platforms"); grid.replaceChildren();
+  for (const p of d.platforms) {
+    grid.append(el("div", { class: `plat ${p.risk_level}` },
+      el("div", { class: "name", text: p.name }),
+      el("div", { class: "dom", text: p.domain }),
+      el("span", { class: `pill ${p.risk_level}`, text: RISK_LABEL[p.risk_level] }),
+      p.breached ? el("div", { class: "leak", text: `Breached ${(p.breach_date || "").slice(0, 4)}: ${p.data_leaked.slice(0, 4).join(", ")}` }) : null,
+    ));
+  }
+  if (!d.platforms.length) grid.append(el("p", { class: "h2sub", text: "No registered accounts found on the sites we could check." }));
+
+  // Breaches
+  show("breachCard", d.breaches.length > 0);
+  $("breachSub").textContent = d.breach_mode === "confirmed"
+    ? "Breaches this email appears in, plus breaches at services you use (newest first)."
+    : "Known breaches at services you have an account with (newest first). Your account may have been included.";
+  const tl = $("breaches"); tl.replaceChildren();
+  for (const b of d.breaches) {
+    const pw = b.data_classes.includes("Passwords");
+    const classes = el("div", { class: "classes" });
+    b.data_classes.slice(0, 6).forEach((c, i) => { if (i) classes.append(", "); classes.append(c === "Passwords" ? el("b", { text: c }) : c); });
+    tl.append(el("div", { class: `tl${pw ? " pw" : ""}` },
+      el("div", { class: "when", text: `${b.date || "Unknown date"}${b.accounts_affected ? ` · ${b.accounts_affected.toLocaleString()} accounts` : ""}${b.confirmed ? " · your email confirmed" : ""}` }),
+      el("div", { class: "title", text: b.name }),
+      classes,
+      b.description ? el("div", { class: "desc", text: b.description.length > 220 ? b.description.slice(0, 220) + "…" : b.description }) : null,
+    ));
+  }
+
+  // Cleanup plan
+  const plan = $("plan"); plan.replaceChildren();
+  for (const a of d.cleanup_plan) {
+    const box = el("input", { type: "checkbox", "aria-label": a.action });
+    const li = el("li", {}, box, el("div", {},
+      el("div", { class: "txt" }, el("span", { class: "tag", text: `${TYPE_LABEL[a.type] || ""} ` }), link(a.url, a.action)),
+      a.difficulty ? el("div", { class: "meta", text: `Deletion difficulty: ${a.difficulty}` }) : null));
+    box.addEventListener("change", () => li.classList.toggle("checked", box.checked));
+    plan.append(li);
+  }
+  if (!d.cleanup_plan.length) plan.append(el("li", { text: "Nothing urgent — keep using unique passwords and 2FA." }));
+}
+
+async function loadAdvice(scan) {
+  const body = $("aiBody");
+  body.replaceChildren(el("div", { class: "shimmer", style: "width:70%" }), el("div", { class: "shimmer" }), el("div", { class: "shimmer", style: "width:85%" }));
+  try {
+    const r = await fetch("/api/advise", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(scan) });
+    const a = await r.json();
+    const list = el("ol");
+    for (const x of a.actions || []) list.append(el("li", {}, link(x.url, x.title), x.why ? el("small", { text: x.why }) : null));
+    body.replaceChildren(
+      el("h3", { text: a.headline }),
+      a.explanation ? el("p", { text: a.explanation }) : null,
+      list,
+      a.encouragement ? el("p", { style: "margin-top:12px", text: a.encouragement }) : null,
+      el("div", { class: "note", text: a.ai ? `Written by ${a.model} from your scan results. It never sees your email address.` : "AI advisor unavailable right now; showing your top actions instead." }),
+    );
+  } catch {
+    body.replaceChildren(el("p", { text: "AI advisor unavailable right now. Your full cleanup plan is below." }));
+  }
+}
+</script>
+</body>
+</html>

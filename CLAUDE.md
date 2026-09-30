@@ -78,7 +78,18 @@ Non-obvious fixes — don't undo them:
 - Per-site timeout is 6s (measured: all answers arrive within 6s). The remaining failures are sites that block automated requests (Cloudflare/DataDome/captcha), dead endpoints, or changed pages. We deliberately don't try to get around bot protection.
 - `user-scanner` is pinned (`==1.5.2`) because its module API changes often. Upgrading usually adds sites, but re-test first.
 
-### Step 3: HaveIBeenPwned integration (`hibp_scan.py`)
+### Steps 3–7: DONE (2026-09-30)
+- **Breaches** (`scanner/breaches.py`): with no HIBP key, it matches the public HIBP catalog (`data/hibp_breaches.json`) to the user's platforms. These show `confirmed=false`, meaning "a service you use was breached". With `HIBP_API_KEY`, the per-email API adds `confirmed=true` breaches. **Never present catalog breaches as proof the user's own data leaked.** The UI and AI prompt both word this carefully.
+- **Deletion links** (`scanner/justdelete.py`): from `data/justdelete.json` (JustDeleteMe's `_data/sites.json`).
+- **Score and rule-based plan** (`scoring/engine.py`): catalog breaches count at 0.3 weight. The "registered AND breached" bonus only counts confirmed breaches.
+- **AI advisor** (`advisor.py`, `POST /api/advise`): Gemini writes a plain-language explanation and 3–5 actions.
+  - Only platform and breach facts are sent, **never the email**.
+  - The AI returns an account name and an action type; **links are attached by our code**, never taken from the model (it made up URLs).
+  - Model chain: `gemini-3.6-flash` → `gemini-flash-lite-latest` → `gemini-3.5-flash`. If every model fails, the rule-based plan is shown instead.
+  - Key: `GEMINI_API_KEY` in `backend/.env` locally (git-ignored, loaded by `app.py`) or `/etc/exposureshield.env` on the VM.
+- **Frontend** (`frontend/index.html`): FastAPI serves it locally at http://localhost:8000 (the same origin as the API); on the VM, Caddy serves it.
+
+### (original spec) Step 3: HaveIBeenPwned integration (`hibp_scan.py`)
 - Call HIBP API for the email
 - Parse response: breach name, date, data classes (Passwords, Email, Phone, etc.)
 - Handle 404 (no breaches found) gracefully — that's a good result
